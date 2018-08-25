@@ -25,7 +25,6 @@
 package fredboat.config.property;
 
 import fredboat.commandmeta.MessagingException;
-
 import java.util.List;
 
 /**
@@ -85,6 +84,16 @@ public interface Credentials {
      * @return open weather api key
      */
     String getOpenWeatherKey();
+
+    /**
+     * @return genius client ID
+     */
+    String getGeniusClientId();
+
+    /**
+     * @return genius client access key
+     */
+    String getGeniusAccessToken();
 
     /**
      * @return the sentry dsn

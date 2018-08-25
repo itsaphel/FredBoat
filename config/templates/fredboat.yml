@@ -133,6 +133,10 @@ credentials:
   # Error aggregation service https://sentry.io/
   sentryDsn:      ""
 
+  # Music lyrics https://genius.com/api-clients
+  geniusClientId: ""
+  geniusAccessToken: ""
+
 
 
 event-logger:

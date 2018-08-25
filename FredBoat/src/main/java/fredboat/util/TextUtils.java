@@ -35,19 +35,16 @@ import fredboat.messaging.internal.Context;
 import fredboat.sentinel.Member;
 import fredboat.sentinel.User;
 import fredboat.shared.constant.BotConstants;
-import org.apache.commons.lang3.StringUtils;
-import org.apache.commons.lang3.math.NumberUtils;
-import org.apache.commons.text.CharacterPredicates;
-import org.apache.commons.text.RandomStringGenerator;
-import org.slf4j.LoggerFactory;
-
-import javax.annotation.Nonnull;
-import javax.annotation.Nullable;
 import java.text.DecimalFormat;
 import java.time.Instant;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
-import java.util.*;
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.LinkedHashSet;
+import java.util.List;
+import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -55,6 +52,13 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
+import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
+import org.apache.commons.lang3.StringUtils;
+import org.apache.commons.lang3.math.NumberUtils;
+import org.apache.commons.text.CharacterPredicates;
+import org.apache.commons.text.RandomStringGenerator;
+import org.slf4j.LoggerFactory;
 
 public class TextUtils {
 
@@ -64,21 +68,23 @@ public class TextUtils {
     private static final List<Character> MARKDOWN_CHARS = Arrays.asList('*', '`', '~', '_');
 
     public static final CharMatcher SPLIT_SELECT_SEPARATOR =
-            CharMatcher.whitespace().or(CharMatcher.is(','))
-                    .precomputed();
+      CharMatcher.whitespace().or(CharMatcher.is(','))
+        .precomputed();
 
     public static final CharMatcher SPLIT_SELECT_ALLOWED =
-            SPLIT_SELECT_SEPARATOR.or(CharMatcher.inRange('0', '9'))
-                    .precomputed();
+      SPLIT_SELECT_SEPARATOR.or(CharMatcher.inRange('0', '9'))
+        .precomputed();
 
     public static final Splitter COMMA_OR_WHITESPACE = Splitter.on(SPLIT_SELECT_SEPARATOR)
-            .omitEmptyStrings() // 1,,2 doesn't sound right
-            .trimResults();// have it nice and trim
+      .omitEmptyStrings() // 1,,2 doesn't sound right
+      .trimResults();// have it nice and trim
 
     public static final DateTimeFormatter TIME_IN_CENTRAL_EUROPE = DateTimeFormatter.ofPattern("dd.MM.yyyy HH:mm:ss z")
-            .withZone(ZoneId.of("Europe/Copenhagen"));
+      .withZone(ZoneId.of("Europe/Copenhagen"));
 
     public static final char ZERO_WIDTH_CHAR = '\u200b';
+
+    public static final int DISCORD_CHARACTER_LIMIT = 2000;
 
     private static final org.slf4j.Logger log = LoggerFactory.getLogger(TextUtils.class);
 
@@ -87,32 +93,31 @@ public class TextUtils {
 
     public static String prefaceWithName(Member member, String msg) {
         return escapeAndDefuse(member.getEffectiveName())
-                + ": "
-                + ensureSpace(msg);
+          + ": "
+          + ensureSpace(msg);
     }
 
     public static String prefaceWithMention(Member member, String msg) {
         return member.getAsMention()
-                + ": "
-                + ensureSpace(msg);
+          + ": "
+          + ensureSpace(msg);
     }
 
-    private static String ensureSpace(String msg){
+    private static String ensureSpace(String msg) {
         return msg.charAt(0) == ' ' ? msg : " " + msg;
     }
 
     private static final String SORRY = "An error occurred " + Emojis.ANGER + "\nPlease try again later. If the issue"
-            + " persists please join our support chat and explain what steps you took to receive this response."; //todo i18n?
+      + " persists please join our support chat and explain what steps you took to receive this response."; //todo i18n?
 
     /**
-     * This method takes care of all exceptions when a {@link Context} is present. If it is an expected exception, like
-     * {@link MessagingException} or any subclass of it, the message of the exception with be shown to the user.
-     * If it is an unexpected exception, a generic message is shown to the user, and the exception is logged with the
-     * passed log message.
+     * This method takes care of all exceptions when a {@link Context} is present. If it is an expected exception, like {@link MessagingException} or
+     * any subclass of it, the message of the exception with be shown to the user. If it is an unexpected exception, a generic message is shown to the
+     * user, and the exception is logged with the passed log message.
      *
      * @param logMessage a log message with possible futher clues as to what could have gone wrong
-     * @param e          the exception that happened
-     * @param context    current context, used to send a message to the user
+     * @param e the exception that happened
+     * @param context current context, used to send a message to the user
      */
     public static void handleException(String logMessage, Throwable e, Context context) {
         String label;
@@ -123,7 +128,6 @@ public class TextUtils {
             label = e.getClass().getSimpleName();
         }
         Metrics.handledExceptions.labels(label).inc();
-
 
         if (e instanceof MessagingException) {
             context.replyWithName(e.getMessage());
@@ -144,9 +148,9 @@ public class TextUtils {
 
     private static CompletionStage<String> postToHasteBasedService(String baseUrl, String body) {
         return BotController.Companion.getHTTP().post(baseUrl, body, "text/plain")
-                .enqueue()
-                .asJson()
-                .thenApply(json -> json.getString("key"));
+          .enqueue()
+          .asJson()
+          .thenApply(json -> json.getString("key"));
     }
 
     private static CompletionStage<String> postToHastebin(String body) {
@@ -158,33 +162,31 @@ public class TextUtils {
     }
 
     /**
-     * This method will call all available paste services to attempt to upload the body, and take care of logging any
-     * issues with those underlying paste services, callers only have to handle success or failure (the latter
-     * represented by an empty Optional)
+     * This method will call all available paste services to attempt to upload the body, and take care of logging any issues with those underlying
+     * paste services, callers only have to handle success or failure (the latter represented by an empty Optional)
      *
      * @param body the content that should be uploaded to a paste service
-     * @return the url of the uploaded paste, or null if there was an exception doing so. This is represented by the
-     * Optional return type
+     * @return the url of the uploaded paste, or null if there was an exception doing so. This is represented by the Optional return type
      */
     public static CompletionStage<Optional<String>> postToPasteService(String body) {
         return postToHastebin(body)
-                .thenApply(key -> Optional.of("https://hastebin.com/" + key))
-                .exceptionally(t -> {
-                    log.info("Could not post to hastebin", t);
-                    return Optional.empty();
-                })
-                .thenCompose(url -> {
-                    if (!url.isPresent()) {
-                        return postToWastebin(body)
-                                .thenApply(key -> Optional.of("https://wastebin.party/" + key))
-                                .exceptionally(t -> {
-                                    log.error("Could not post to wastebin either", t);
-                                    return Optional.empty();
-                                });
-                    } else {
-                        return CompletableFuture.completedFuture(url);
-                    }
-                });
+          .thenApply(key -> Optional.of("https://hastebin.com/" + key))
+          .exceptionally(t -> {
+              log.info("Could not post to hastebin", t);
+              return Optional.empty();
+          })
+          .thenCompose(url -> {
+              if (!url.isPresent()) {
+                  return postToWastebin(body)
+                    .thenApply(key -> Optional.of("https://wastebin.party/" + key))
+                    .exceptionally(t -> {
+                        log.error("Could not post to wastebin either", t);
+                        return Optional.empty();
+                    });
+              } else {
+                  return CompletableFuture.completedFuture(url);
+              }
+          });
     }
 
     public static String formatTime(long millis) {
@@ -225,11 +227,11 @@ public class TextUtils {
         return roundToTwo(percent * 100) + "%";
     }
 
-    public static String substringPreserveWords(String str, int len){
+    public static String substringPreserveWords(String str, int len) {
         Pattern pattern = Pattern.compile("^([\\w\\W]{" + len + "}\\S+?)\\s");
         Matcher matcher = pattern.matcher(str);
 
-        if (matcher.find()){
+        if (matcher.find()) {
             return matcher.group(1);
         } else {
             //Oh well
@@ -248,11 +250,17 @@ public class TextUtils {
         m.find();
 
         int capturedGroups = 0;
-        if(m.group(1) != null) capturedGroups++;
-        if(m.group(2) != null) capturedGroups++;
-        if(m.group(3) != null) capturedGroups++;
+        if (m.group(1) != null) {
+            capturedGroups++;
+        }
+        if (m.group(2) != null) {
+            capturedGroups++;
+        }
+        if (m.group(3) != null) {
+            capturedGroups++;
+        }
 
-        switch(capturedGroups){
+        switch (capturedGroups) {
             case 0:
                 throw new IllegalStateException("Unable to match " + str);
             case 1:
@@ -334,7 +342,7 @@ public class TextUtils {
     public static boolean isSplitSelect(@Nonnull String arg) {
         String cleaned = SPLIT_SELECT_ALLOWED.negate().collapseFrom(arg, ' ');
         int numberOfCollapsed = arg.length() - cleaned.length();
-        if (numberOfCollapsed  >= 2) {
+        if (numberOfCollapsed >= 2) {
             // rationale: prefix will be collapsed to 1 char, won't matter that much
             //            small typos (1q 2 3 4) will be collapsed in place, won't matter that much
             //            longer strings will be collapsed, words reduced to 1 char
@@ -343,8 +351,8 @@ public class TextUtils {
         }
         AtomicBoolean empty = new AtomicBoolean(true);
         boolean allDigits = splitSelectStream(arg)
-                .peek(__ -> empty.set(false))
-                .allMatch(NumberUtils::isDigits);
+          .peek(__ -> empty.set(false))
+          .allMatch(NumberUtils::isDigits);
         return !empty.get() && allDigits;
     }
 
@@ -358,14 +366,14 @@ public class TextUtils {
      */
     public static Collection<Integer> getSplitSelect(@Nonnull String arg) {
         return splitSelectStream(arg)
-                .map(Integer::valueOf)
-                .collect(Collectors.toCollection(LinkedHashSet::new));
+          .map(Integer::valueOf)
+          .collect(Collectors.toCollection(LinkedHashSet::new));
     }
 
     private static Stream<String> splitSelectStream(@Nonnull String arg) {
         return Streams.stream(COMMA_OR_WHITESPACE.split(arg))
-                .map(SPLIT_SELECT_ALLOWED::retainFrom)
-                .filter(StringUtils::isNotEmpty);
+          .map(SPLIT_SELECT_ALLOWED::retainFrom)
+          .filter(StringUtils::isNotEmpty);
     }
 
     public static String getTimeInCentralEurope() {
@@ -399,8 +407,8 @@ public class TextUtils {
     }
 
     /**
-     * @return the input, with escaped markdown and defused mentions and URLs
-     * It is a good idea to use this on any user generated values that we reply in plain text.
+     * @return the input, with escaped markdown and defused mentions and URLs It is a good idea to use this on any user generated values that we reply
+     * in plain text.
      */
     @Nonnull
     public static String escapeAndDefuse(@Nonnull String input) {
@@ -424,7 +432,7 @@ public class TextUtils {
     @Nonnull
     private static String defuseMentions(@Nonnull String input) {
         return input.replaceAll("@here", "@" + ZERO_WIDTH_CHAR + "here")
-                .replaceAll("@everyone", "@" + ZERO_WIDTH_CHAR + "everyone");
+          .replaceAll("@everyone", "@" + ZERO_WIDTH_CHAR + "everyone");
     }
 
     @Nonnull
@@ -434,9 +442,9 @@ public class TextUtils {
 
     @Nonnull
     private static RandomStringGenerator randomStringGenerator = new RandomStringGenerator.Builder()
-            .withinRange('0', 'z')
-            .filteredBy(CharacterPredicates.LETTERS, CharacterPredicates.DIGITS)
-            .build();
+      .withinRange('0', 'z')
+      .filteredBy(CharacterPredicates.LETTERS, CharacterPredicates.DIGITS)
+      .build();
 
     public static String randomAlphaNumericString(int length) {
         if (length < 1) {
@@ -450,9 +458,9 @@ public class TextUtils {
      */
     public static String asString(@Nonnull fredboat.sentinel.Member member) {
         return String.format("%s#%s [%d]",
-                member.getEffectiveName(),
-                member.getDiscrim(),
-                member.getId());
+          member.getEffectiveName(),
+          member.getDiscrim(),
+          member.getId());
     }
 
     /**
@@ -460,8 +468,8 @@ public class TextUtils {
      */
     public static String asString(@Nonnull User user) {
         return String.format("%s#%s [%d]",
-                user.getName(),
-                user.getDiscrim(),
-                user.getId());
+          user.getName(),
+          user.getDiscrim(),
+          user.getId());
     }
 }

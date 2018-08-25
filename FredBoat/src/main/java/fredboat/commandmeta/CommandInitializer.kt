@@ -49,6 +49,7 @@ import fredboat.definitions.SearchProvider
 import fredboat.sentinel.Sentinel
 import fredboat.shared.constant.BotConstants
 import fredboat.util.AsciiArtConstant
+import fredboat.util.rest.GeniusAPI
 import fredboat.util.rest.TrackSearcher
 import fredboat.util.rest.Weather
 import fredboat.util.rest.YoutubeAPI
@@ -60,9 +61,9 @@ import java.util.function.Supplier
 
 @Service
 class CommandInitializer(cacheMetrics: CacheMetricsCollector, weather: Weather, trackSearcher: TrackSearcher,
-                          videoSelectionCache: VideoSelectionCache, sentryConfiguration: SentryConfiguration,
-                          playerLimiter: PlayerLimiter, youtubeAPI: YoutubeAPI, sentinel: Sentinel,
-                          springContext: Supplier<ApplicationContext>) {
+                         geniusApi: GeniusAPI, videoSelectionCache: VideoSelectionCache, sentryConfiguration: SentryConfiguration,
+                         playerLimiter: PlayerLimiter, youtubeAPI: YoutubeAPI, sentinel: Sentinel,
+                         springContext: Supplier<ApplicationContext>) {
 
     companion object {
         /** Used for integration testing  */
@@ -248,6 +249,7 @@ class CommandInitializer(cacheMetrics: CacheMetricsCollector, weather: Weather, 
         musicModule.registerCommand(HistoryCommand("history", "hist", "h"))
         musicModule.registerCommand(ListCommand("list", "queue", "q", "l"))
         musicModule.registerCommand(NowplayingCommand(youtubeAPI, "nowplaying", "np"))
+        musicModule.registerCommand(LyricsCommand(geniusApi, "lyrics"))
 
         /* Seeking */
         musicModule.registerCommand(ForwardCommand("forward", "fwd"))

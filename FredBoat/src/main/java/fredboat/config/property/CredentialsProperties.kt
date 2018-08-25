@@ -54,6 +54,8 @@ class CredentialsProperties : Credentials {
     private var sentryDsn = ""
     private var carbonKey = ""
     private var dikeUrl = ""
+    private var geniusClientId = ""
+    private var geniusAccessToken = ""
 
     override fun getBotToken(): String {
         if (discordBotToken.isBlank()) {
@@ -89,6 +91,8 @@ class CredentialsProperties : Credentials {
     override fun getOpenWeatherKey() = openWeatherKey
     override fun getSentryDsn() = sentryDsn
     override fun getCarbonKey() = carbonKey
+    override fun getGeniusClientId() = geniusClientId
+    override fun getGeniusAccessToken() = geniusAccessToken
 
     fun setDiscordBotToken(discordBotToken: String) {
         this.discordBotToken = discordBotToken
@@ -135,5 +139,13 @@ class CredentialsProperties : Credentials {
 
     fun setDikeUrl(dikeUrl: String) {
         this.dikeUrl = dikeUrl
+    }
+
+    fun setGeniusClientId(geniusClientId: String) {
+        this.geniusClientId = geniusClientId
+    }
+
+    fun setGeniusAccessToken(geniusAccessToken: String) {
+        this.geniusAccessToken = geniusAccessToken
     }
 }
